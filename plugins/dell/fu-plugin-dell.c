@@ -731,16 +731,20 @@ fu_plugin_dell_detect_tpm (FuPlugin *plugin, GError **error)
 	pretty_tpm_name_alt = g_strdup_printf ("TPM %s", tpm_mode_alt);
 
 	/* build Standard device nodes */
-	dev = fu_device_new ();
-	fu_device_set_id (dev, tpm_id);
+	if (data->tpm_device != NULL) {
+		dev = g_object_ref (data->tpm_device);
+	} else {
+		dev = fu_device_new ();
+		fu_device_set_id (dev, tpm_id);
+		fu_device_set_vendor (dev, "Dell Inc.");
+		fu_device_set_name (dev, pretty_tpm_name);
+		fu_device_set_summary (dev, "Platform TPM device");
+		fu_device_set_version (dev, version_str, FWUPD_VERSION_FORMAT_QUAD);
+		fu_device_add_flag (dev, FWUPD_DEVICE_FLAG_INTERNAL);
+		fu_device_add_icon (dev, "computer");
+	}
 	fu_device_add_instance_id (dev, tpm_guid_raw);
-	fu_device_set_vendor (dev, "Dell Inc.");
-	fu_device_set_name (dev, pretty_tpm_name);
-	fu_device_set_summary (dev, "Platform TPM device");
-	fu_device_set_version (dev, version_str, FWUPD_VERSION_FORMAT_QUAD);
-	fu_device_add_flag (dev, FWUPD_DEVICE_FLAG_INTERNAL);
 	fu_device_add_flag (dev, FWUPD_DEVICE_FLAG_REQUIRE_AC);
-	fu_device_add_icon (dev, "computer");
 	fu_device_set_metadata (dev, FU_DEVICE_METADATA_UEFI_DEVICE_KIND, "dell-tpm-firmware");
 	if ((out->status & TPM_OWN_MASK) == 0 && out->flashes_left > 0) {
 		if (fu_plugin_dell_capsule_supported (plugin)) {
@@ -761,7 +765,8 @@ fu_plugin_dell_detect_tpm (FuPlugin *plugin, GError **error)
 
 	if (!fu_device_setup (dev, error))
 		return FALSE;
-	fu_plugin_device_register (plugin, dev);
+	if (data->tpm_device == NULL)
+		fu_plugin_device_register (plugin, dev);
 
 	/* build alternate device node */
 	if (can_switch_modes) {
@@ -803,6 +808,8 @@ fu_plugin_dell_detect_tpm (FuPlugin *plugin, GError **error)
 void
 fu_plugin_device_registered (FuPlugin *plugin, FuDevice *device)
 {
+	FuPluginData *data = fu_plugin_get_data (plugin);
+
 	/* thunderbolt plugin */
 	if (g_strcmp0 (fu_device_get_plugin (device), "thunderbolt") == 0 &&
 	    fu_device_has_flag (device, FWUPD_DEVICE_FLAG_INTERNAL)) {
@@ -823,6 +830,12 @@ fu_plugin_device_registered (FuPlugin *plugin, FuDevice *device)
 			fu_device_add_instance_id (device, device_id);
 			fu_device_add_flag (device, FWUPD_DEVICE_FLAG_UPDATABLE);
 		}
+	}
+	if (g_strcmp0 (fu_device_get_plugin (device), "tpm") == 0 &&
+	    data->tpm_device == NULL) {
+		g_debug ("saving reference to %s for later use",
+			 fu_device_get_id (device));
+		data->tpm_device = g_object_ref (device);
 	}
 }
 
@@ -852,6 +865,7 @@ fu_plugin_init (FuPlugin *plugin)
 
 	/* make sure that UEFI plugin is ready to receive devices */
 	fu_plugin_add_rule (plugin, FU_PLUGIN_RULE_RUN_AFTER, "uefi");
+	fu_plugin_add_rule (plugin, FU_PLUGIN_RULE_RUN_AFTER, "tpm");
 }
 
 void
@@ -860,6 +874,8 @@ fu_plugin_destroy (FuPlugin *plugin)
 	FuPluginData *data = fu_plugin_get_data (plugin);
 	if (data->smi_obj->smi)
 		dell_smi_obj_free (data->smi_obj->smi);
+	if (data->tpm_device != NULL)
+		g_object_unref (data->tpm_device);
 	g_free(data->smi_obj);
 }
 

@@ -15,6 +15,7 @@ struct FuPluginData {
 	guint16			fake_pid;
 	gboolean		can_switch_modes;
 	gboolean		capsule_supported;
+	FuDevice		*tpm_device;
 };
 
 void
