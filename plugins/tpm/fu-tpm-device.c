@@ -249,7 +249,7 @@ fu_tpm_device_setup (FuDevice *device, GError **error)
 		return FALSE;
 	if (!fu_plugin_tpm_get_uint32 (ctx, TPM2_PT_FIRMWARE_VERSION_2, &version2, error))
 		return FALSE;
-	version_raw = ((guint64) version1) << 32 | ((guint64) version2);
+	version_raw = ((guint64) GUINT32_FROM_BE (version1)) << 32 | ((guint64) GUINT32_FROM_BE (version2));
 	fu_device_set_version_raw (device, version_raw);
 
 	/* this has to be done after _add_instance_id() adds the quirks */
