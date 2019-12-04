@@ -276,6 +276,8 @@ fu_tpm_device_init (FuTpmDevice *self)
 {
 	fu_device_set_name (FU_DEVICE (self), "TPM");
 	fu_device_set_version_format (FU_DEVICE (self), FWUPD_VERSION_FORMAT_QUAD);
+	fu_device_add_flag (FU_DEVICE (self), FWUPD_DEVICE_FLAG_INTERNAL);
+	fu_device_add_icon (FU_DEVICE (self), "computer");
 	fu_udev_device_set_readonly (FU_UDEV_DEVICE (self), TRUE);
 }
 

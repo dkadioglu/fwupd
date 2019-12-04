@@ -85,6 +85,7 @@ fu_tpm_eventlog_device_init (FuTpmEventlogDevice *self)
 {
 	self->items = g_ptr_array_new_with_free_func ((GDestroyNotify) fu_tpm_eventlog_device_item_free);
 	fu_device_set_name (FU_DEVICE (self), "Event Log");
+	fu_device_add_flag (FU_DEVICE (self), FWUPD_DEVICE_FLAG_INTERNAL);
 	fu_device_set_logical_id (FU_DEVICE (self), "event-log");
 	fu_device_add_instance_id (FU_DEVICE (self), "TpmPcrEvent");
 }
