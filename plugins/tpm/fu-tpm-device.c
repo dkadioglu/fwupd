@@ -265,7 +265,7 @@ fu_tpm_device_setup (FuDevice *device, GError **error)
 
 	/* try to add the event log as a child */
 	if (!fu_tpm_device_setup_event_log (self, &error_local))
-		g_warning ("no event log: %s", error_local->message);
+		g_warning ("failed to read event log: %s", error_local->message);
 
 	/* success */
 	return TRUE;
