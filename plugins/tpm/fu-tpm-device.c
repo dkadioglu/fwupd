@@ -127,6 +127,8 @@ fu_tpm_device_convert_manufacturer (const gchar *manufacturer)
 		return "Atmel";
 	if (g_strcmp0 (manufacturer, "BRCM") == 0)
 		return "Broadcom";
+	if (g_strcmp0 (manufacturer, "HPE") == 0)
+		return "HPE";
 	if (g_strcmp0 (manufacturer, "IBM") == 0)
 		return "IBM";
 	if (g_strcmp0 (manufacturer, "IFX") == 0)
@@ -135,6 +137,8 @@ fu_tpm_device_convert_manufacturer (const gchar *manufacturer)
 		return "Intel";
 	if (g_strcmp0 (manufacturer, "LEN") == 0)
 		return "Lenovo";
+	if (g_strcmp0 (manufacturer, "MSFT") == 0)
+		return "Microsoft";
 	if (g_strcmp0 (manufacturer, "NSM") == 0)
 		return "National Semiconductor";
 	if (g_strcmp0 (manufacturer, "NTZ") == 0)
@@ -157,6 +161,8 @@ fu_tpm_device_convert_manufacturer (const gchar *manufacturer)
 		return "Winbond";
 	if (g_strcmp0 (manufacturer, "ROCC") == 0)
 		return "Fuzhou Rockchip";
+	if (g_strcmp0 (manufacturer, "GOOG") == 0)
+		return "Google";
 	return NULL;
 }
 
