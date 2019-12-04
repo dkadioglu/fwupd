@@ -16,10 +16,6 @@ Pin-Priority: 901\n\
 Package: tpm-udev\n\
 Pin: release a=unstable\n\
 Pin-Priority: 901\n'\
-\n\
-Package: tpm-udev\n\
-Pin: release a=unstable\n\
-Pin-Priority: 901\n'\
  > /etc/apt/preferences
 RUN cat /etc/apt/preferences
 RUN echo fubar > /etc/machine-id
