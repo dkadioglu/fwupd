@@ -21,6 +21,7 @@ meson .. \
 	-Dplugin_dell=false \
 	-Dplugin_modem_manager=false \
 	-Dplugin_redfish=false \
+	-Dplugin_tpm=false \
 	-Dintrospection=false \
 	-Dgtkdoc=false \
 	-Dlibxmlb:introspection=false \
