@@ -648,18 +648,11 @@ fu_plugin_dell_detect_tpm (FuPlugin *plugin, GError **error)
 	const gchar *tpm_mode_alt;
 	guint16 system_id = 0;
 	gboolean can_switch_modes = FALSE;
-	g_autofree gchar *pretty_tpm_name_alt = NULL;
-	g_autofree gchar *pretty_tpm_name = NULL;
-	g_autofree gchar *tpm_guid_raw_alt = NULL;
-	g_autofree gchar *tpm_guid_alt = NULL;
 	g_autofree gchar *tpm_guid = NULL;
 	g_autofree gchar *tpm_guid_raw = NULL;
-	g_autofree gchar *tpm_id_alt = NULL;
 	g_autofree gchar *tpm_id = NULL;
 	g_autofree gchar *version_str = NULL;
 	struct tpm_status *out = NULL;
-	g_autoptr (FuDevice) dev_alt = NULL;
-	g_autoptr (FuDevice) dev = NULL;
 	g_autoptr(GError) error_tss = NULL;
 
 	fu_dell_clear_smi (data->smi_obj);
@@ -716,71 +709,61 @@ fu_plugin_dell_detect_tpm (FuPlugin *plugin, GError **error)
 	tpm_guid_raw = g_strdup_printf ("%04x-%s", system_id, tpm_mode);
 	tpm_guid = fwupd_guid_hash_string (tpm_guid_raw);
 	tpm_id = g_strdup_printf ("DELL-%s" G_GUINT64_FORMAT, tpm_guid);
-
-	tpm_guid_raw_alt = g_strdup_printf ("%04x-%s", system_id, tpm_mode_alt);
-	tpm_guid_alt = fwupd_guid_hash_string (tpm_guid_raw_alt);
-	tpm_id_alt = g_strdup_printf ("DELL-%s" G_GUINT64_FORMAT, tpm_guid_alt);
-
-	g_debug ("Creating primary TPM GUID %s and secondary TPM GUID %s",
-		 tpm_guid_raw, tpm_guid_raw_alt);
 	version_str = fu_common_version_from_uint32 (out->fw_version,
 						     FWUPD_VERSION_FORMAT_QUAD);
-
-	/* make it clear that the TPM is a discrete device of the product */
-	pretty_tpm_name = g_strdup_printf ("TPM %s", tpm_mode);
-	pretty_tpm_name_alt = g_strdup_printf ("TPM %s", tpm_mode_alt);
+	fu_device_set_version (data->tpm_device, version_str, FWUPD_VERSION_FORMAT_QUAD);
 
 	/* build Standard device nodes */
-	if (data->tpm_device != NULL) {
-		dev = g_object_ref (data->tpm_device);
-	} else {
-		dev = fu_device_new ();
-		fu_device_set_id (dev, tpm_id);
-		fu_device_set_vendor (dev, "Dell Inc.");
-		fu_device_set_name (dev, pretty_tpm_name);
-		fu_device_set_summary (dev, "Platform TPM device");
-		fu_device_set_version (dev, version_str, FWUPD_VERSION_FORMAT_QUAD);
-		fu_device_add_flag (dev, FWUPD_DEVICE_FLAG_INTERNAL);
-		fu_device_add_icon (dev, "computer");
-	}
-	fu_device_add_instance_id (dev, tpm_guid_raw);
-	fu_device_add_flag (dev, FWUPD_DEVICE_FLAG_REQUIRE_AC);
-	fu_device_set_metadata (dev, FU_DEVICE_METADATA_UEFI_DEVICE_KIND, "dell-tpm-firmware");
+	fu_device_add_instance_id (data->tpm_device, tpm_guid_raw);
+	fu_device_add_flag (data->tpm_device, FWUPD_DEVICE_FLAG_REQUIRE_AC);
+	fu_device_set_metadata (data->tpm_device, FU_DEVICE_METADATA_UEFI_DEVICE_KIND, "dell-tpm-firmware");
 	if ((out->status & TPM_OWN_MASK) == 0 && out->flashes_left > 0) {
 		if (fu_plugin_dell_capsule_supported (plugin)) {
-			fu_device_add_flag (dev, FWUPD_DEVICE_FLAG_UPDATABLE);
-			fu_device_add_flag (dev, FWUPD_DEVICE_FLAG_NEEDS_REBOOT);
+			fu_device_add_flag (data->tpm_device, FWUPD_DEVICE_FLAG_UPDATABLE);
+			fu_device_add_flag (data->tpm_device, FWUPD_DEVICE_FLAG_NEEDS_REBOOT);
 		} else {
-			fu_device_set_update_error (dev,
+			fu_device_set_update_error (data->tpm_device,
 						    "UEFI capsule updates turned off in BIOS setup");
 		}
-		fu_device_set_flashes_left (dev, out->flashes_left);
+		fu_device_set_flashes_left (data->tpm_device, out->flashes_left);
 	} else {
-		fu_device_set_update_error (dev,
+		fu_device_set_update_error (data->tpm_device,
 					    "Updating disabled due to TPM ownership");
 	}
 	/* build GUIDs from TSS strings */
-	if (!fu_plugin_dell_add_tpm_model (dev, &error_tss))
+	if (!fu_plugin_dell_add_tpm_model (data->tpm_device, &error_tss))
 		g_debug ("could not build instances: %s", error_tss->message);
 
-	if (!fu_device_setup (dev, error))
-		return FALSE;
-	if (data->tpm_device == NULL)
-		fu_plugin_device_register (plugin, dev);
+//	if (!fu_device_setup (data->tpm_device, error))
+//		return FALSE;
 
 	/* build alternate device node */
 	if (can_switch_modes) {
+		g_autofree gchar *pretty_tpm_name_alt = NULL;
+		g_autofree gchar *tpm_id_alt = NULL;
+		g_autofree gchar *tpm_guid_raw_alt = NULL;
+		g_autofree gchar *tpm_guid_alt = NULL;
+		g_autoptr (FuDevice) dev_alt = NULL;
+
+		tpm_guid_raw_alt = g_strdup_printf ("%04x-%s", system_id, tpm_mode_alt);
+		tpm_guid_alt = fwupd_guid_hash_string (tpm_guid_raw_alt);
+		tpm_id_alt = g_strdup_printf ("DELL-%s" G_GUINT64_FORMAT, tpm_guid_alt);
+		pretty_tpm_name_alt = g_strdup_printf ("TPM %s", tpm_mode_alt);
+
+		g_debug ("Creating primary TPM GUID %s and secondary TPM GUID %s",
+			 tpm_guid_raw, tpm_guid_raw_alt);
+
 		dev_alt = fu_device_new ();
 		fu_device_set_id (dev_alt, tpm_id_alt);
 		fu_device_add_instance_id (dev_alt, tpm_guid_raw_alt);
-		fu_device_set_vendor (dev, "Dell Inc.");
+		fu_device_set_vendor (data->tpm_device, "Dell Inc.");
 		fu_device_set_name (dev_alt, pretty_tpm_name_alt);
 		fu_device_set_summary (dev_alt, "Alternate mode for platform TPM device");
 		fu_device_add_flag (dev_alt, FWUPD_DEVICE_FLAG_INTERNAL);
 		fu_device_add_flag (dev_alt, FWUPD_DEVICE_FLAG_REQUIRE_AC);
 		fu_device_add_flag (dev_alt, FWUPD_DEVICE_FLAG_LOCKED);
 		fu_device_add_icon (dev_alt, "computer");
-		fu_device_set_alternate_id (dev_alt, fu_device_get_id (dev));
+		fu_device_set_alternate_id (dev_alt, fu_device_get_id (data->tpm_device));
 		fu_device_set_metadata (dev_alt, FU_DEVICE_METADATA_UEFI_DEVICE_KIND, "dell-tpm-firmware");
 		fu_device_add_parent_guid (dev_alt, tpm_guid);
 
@@ -797,11 +780,9 @@ fu_plugin_dell_detect_tpm (FuPlugin *plugin, GError **error)
 		if (!fu_device_setup (dev_alt, error))
 			return FALSE;
 		fu_plugin_device_register (plugin, dev_alt);
+	} else {
+		g_debug ("System %04x does not offer TPM modeswitching", system_id);
 	}
-	else
-		g_debug ("System %04x does not offer TPM modeswitching",
-			system_id);
-
 	return TRUE;
 }
 
@@ -831,11 +812,11 @@ fu_plugin_device_registered (FuPlugin *plugin, FuDevice *device)
 			fu_device_add_flag (device, FWUPD_DEVICE_FLAG_UPDATABLE);
 		}
 	}
-	if (g_strcmp0 (fu_device_get_plugin (device), "tpm") == 0 &&
-	    data->tpm_device == NULL) {
-		g_debug ("saving reference to %s for later use",
-			 fu_device_get_id (device));
-		data->tpm_device = g_object_ref (device);
+	if (g_strcmp0 (fu_device_get_plugin (device), "tpm") == 0) {
+		g_autoptr(GError) error_local = NULL;
+		g_set_object (&data->tpm_device, device);
+		if (!fu_plugin_dell_detect_tpm (plugin, &error_local))
+			g_debug ("No switchable TPM detected: %s", error_local->message);
 	}
 }
 
@@ -922,20 +903,7 @@ fu_plugin_startup (FuPlugin *plugin, GError **error)
 		g_debug ("UEFI capsule firmware updating not supported");
 	}
 
+	/* build this for the tests */
+	data->tpm_device = fu_device_new ();
 	return TRUE;
-}
-
-static gboolean
-fu_plugin_dell_coldplug (FuPlugin *plugin, GError **error)
-{
-	/* look for switchable TPM */
-	if (!fu_plugin_dell_detect_tpm (plugin, error))
-		g_debug ("No switchable TPM detected");
-	return TRUE;
-}
-
-gboolean
-fu_plugin_coldplug (FuPlugin *plugin, GError **error)
-{
-	return fu_plugin_dell_coldplug (plugin, error);
 }
